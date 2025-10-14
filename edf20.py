@@ -1982,16 +1982,16 @@ def calculate_respiratory_events(raw):
     return respiratory_events
 
 if __name__ == "__main__":
-    edf_file_path = "EDF/test3.edf"
+    edf_file_path = "EDF/test1.edf"
 
     # Создание отчета
-    print_sleep_report(edf_file_path)
+    # print_sleep_report(edf_file_path)
 
     # Генерация SQL файла
     print("\n" + "=" * 60)
     print("🗃️  ГЕНЕРАЦИЯ SQL ДЛЯ БАЗЫ ДАННЫХ")
     print("=" * 60)
 
-    # sql_file = generate_sql_insert(edf_file_path)
+    sql_file = generate_sql_insert(edf_file_path)
     # if sql_file:
     #     print(f"📁 Файл для импорта: {sql_file}")
