@@ -642,7 +642,7 @@ class SleepAnalyzer:
 		return segments
 
 	def detect_r_peaks(self, ecg_signal, sfreq):
-		"""Детекция R-зубцов в ЭКГ сигнале с адаптивным порогом"""
+		"""Детекция R-зубцов в ЭКГ сигнале"""
 		try:
 			ecg_clean = ecg_signal - np.median(ecg_signal)
 
@@ -658,53 +658,12 @@ class SleepAnalyzer:
 				window_size += 1
 			ecg_smoothed = signal.medfilt(ecg_squared, kernel_size=window_size)
 
-			# 3. АДАПТИВНЫЙ ПОРОГ ДЛЯ ДИНАМИЧЕСКИХ ИЗМЕНЕНИЙ
-			window_size_adaptive = 5 * sfreq  # 5-секундное окно
-			overlap = window_size_adaptive // 2  # 50% перекрытие
-
-			adaptive_thresholds = np.zeros_like(ecg_smoothed)
-
-			for i in range(0, len(ecg_smoothed), overlap):
-				end_idx = min(i + window_size_adaptive, len(ecg_smoothed))
-				window = ecg_smoothed[i:end_idx]
-
-				if len(window) > 0:
-					# Используем 85-й процентиль для каждого окна
-					window_threshold = np.percentile(window, 85)
-					# Заполняем соответствующий сегмент этим порогом
-					adaptive_thresholds[i:end_idx] = window_threshold
-
-			# Если массив слишком короткий для скользящего окна, используем глобальный порог
-			if len(ecg_smoothed) < window_size_adaptive:
-				adaptive_thresholds[:] = np.percentile(ecg_smoothed, 85)
-
-			# Поиск пиков с адаптивным порогом
-			peaks = []
-			for i in range(len(ecg_smoothed)):
-				# Находим пики, превышающие локальный порог
-				if (ecg_smoothed[i] > adaptive_thresholds[i] and
-						(i == 0 or ecg_smoothed[i] > ecg_smoothed[i - 1]) and
-						(i == len(ecg_smoothed) - 1 or ecg_smoothed[i] > ecg_smoothed[i + 1])):
-
-					# Проверяем минимальное расстояние от предыдущего пика
-					if len(peaks) == 0 or (i - peaks[-1]) >= int(0.3 * sfreq):
-						peaks.append(i)
-
-			peaks = np.array(peaks)
-
-			# ВАЛИДАЦИЯ НАЙДЕННЫХ ПИКОВ (дополнительное улучшение)
-			if len(peaks) > 0:
-				valid_peaks = []
-				for peak in peaks:
-					# Проверяем, что амплитуда в исходном сигнале значима
-					if (ecg_signal[peak] > np.median(ecg_signal) + 0.1 * np.std(ecg_signal)):
-						valid_peaks.append(peak)
-				peaks = np.array(valid_peaks)
+			threshold = np.percentile(ecg_smoothed, 85)
+			peaks, _ = signal.find_peaks(ecg_smoothed, height=threshold, distance=int(0.3 * sfreq))
 
 			return peaks
 
 		except Exception as e:
-			print(f"Ошибка в детекции R-пиков: {e}")
 			return np.array([])
 
 	def analyze_spo2_channel_fast(self):
