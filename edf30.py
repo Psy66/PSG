@@ -17,7 +17,7 @@ ANALYSIS_CONFIG = {
 		'rr_min': 0.3,  # минимальный RR интервал (сек)
 		'rr_max': 2.0,  # максимальный RR интервал (сек)
 		'hr_min': 40,  # минимальная ЧСС (уд/мин)
-		'hr_max': 150,  # максимальная ЧСС (уд/мин)
+		'hr_max': 180,  # максимальная ЧСС (уд/мин)
 	},
 
 	# Настройки дыхательного анализа
@@ -653,7 +653,7 @@ class SleepAnalyzer:
 				ecg_filtered = ecg_clean
 
 			ecg_squared = np.square(ecg_filtered)
-			window_size = int(0.12 * sfreq)
+			window_size = int(0.1 * sfreq)
 			if window_size % 2 == 0:
 				window_size += 1
 			ecg_smoothed = signal.medfilt(ecg_squared, kernel_size=window_size)
