@@ -1,4 +1,149 @@
-# Версия 1: Техническая документация для разработчиков
+# 🏥 Sleep Analysis Pipeline
+
+![Python](https://img.shields.io/badge/Python-3.7%2B-blue)
+![MNE](https://img.shields.io/badge/MNE-Python-orange)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+**Automated Polysomnography (PSG) Data Analysis System**
+
+A comprehensive pipeline for processing sleep study data from EDF files, extracting key sleep metrics, and generating database-ready SQL queries.
+
+## ✨ Features
+
+- 🎯 **Automatic EDF File Processing** - Read and parse polysomnography data
+- 🔍 **Artifact Detection** - Smart identification of signal artifacts
+- 📊 **Sleep Stage Analysis** - Comprehensive sleep architecture scoring
+- ❤️ **ECG Analysis** - Heart rate variability and arrhythmia detection
+- 🌬️ **Respiratory Analysis** - Breathing patterns and event detection  
+- 💓 **SpO2 Monitoring** - Oxygen saturation statistics
+- 🗄️ **SQL Export** - Automated database updates
+- ⚡ **Parallel Processing** - Fast multi-file analysis
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+pip install mne numpy scipy
+```
+
+### Basic Usage
+
+```python
+from edf34 import SQLGenerator
+
+# Process all EDF files in a folder
+generator = SQLGenerator()
+generator.generate_sql_files('edf_files/', 'sql_output/')
+```
+
+### Individual Component Usage
+
+#### Analyze Sleep Stages
+```python
+from edf34 import SleepAnalyzer
+
+analyzer = SleepAnalyzer()
+analyzer.load_edf('sleep_study.edf')
+stages = analyzer.calculate_stages()
+print(f"Sleep Efficiency: {stages['sleep_efficiency']}%")
+```
+
+#### ECG Analysis
+```python
+from edf34 import SignalAnalyzer
+
+analyzer = SignalAnalyzer()
+ecg_results = analyzer.analyze_ecg(raw_data)
+print(f"Average HR: {ecg_results['avg_heart_rate']} bpm")
+```
+
+## 📈 Output Metrics
+
+### Sleep Architecture
+- Total Sleep Time & Efficiency
+- N1, N2, N3, REM percentages
+- Sleep Latency & WASO
+- REM Cycles & Density
+
+### Respiratory Analysis
+- Apnea-Hypopnea Index (AHI)
+- Obstructive/Central/Mixed events
+- Oxygen Desaturation Index (ODI)
+- Snoring Analysis
+
+### Cardiac Metrics
+- Heart Rate & Variability
+- Tachycardia/Bradycardia events
+- Comprehensive HRV analysis
+
+### Quality Scores
+- Overall Sleep Quality (0-100)
+- REM Sleep Quality
+- Fragmentation Indices
+
+## 🗃️ Database Integration
+
+The system generates optimized SQL queries for MariaDB/MySQL:
+
+```sql
+UPDATE sleep_statistics SET 
+    total_sleep_time = 429,
+    sleep_efficiency = 85.39,
+    ahi = 13.83,
+    overall_sleep_quality = 56
+WHERE edf_uuid = '1b16b146-91d4-49be-a313-98fea1907037';
+```
+
+## 🛠️ Configuration
+
+Easy customization through config dictionary:
+
+```python
+CONFIG = {
+    'ecg': {'hr_min': 40, 'hr_max': 150},
+    'respiration': {'min_rate': 8, 'max_rate': 25},
+    'spo2': {'threshold_90': 90, 'threshold_85': 85}
+}
+```
+
+## 📁 Project Structure
+
+```
+edf34.py              # Main analysis pipeline
+PSG.sql               # Database schema
+sleep_stats_*.sql     # Generated SQL files
+```
+
+## 🎯 Use Cases
+
+- **Sleep Clinics** - Automated PSG report generation
+- **Research** - Bulk analysis of sleep studies
+- **Telemedicine** - Remote sleep monitoring
+- **Clinical Trials** - Standardized sleep metrics
+
+## 🤝 Contributing
+
+We welcome contributions! Please feel free to submit pull requests or open issues for bugs and feature requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For questions and support:
+- Open an issue on GitHub
+- Check the documentation
+- Review the example SQL outputs
+
+---
+
+**Transform your sleep study analysis with automated, reliable, and comprehensive processing!** 🎉
+
+---
+
+# Техническая документация для разработчиков
 
 # Sleep Analysis Pipeline - Техническая документация
 
@@ -249,148 +394,3 @@ CUSTOM_CONFIG = {
 ```
 
 ---
-
-# Версия 2: Документация для неспециалистов (GitHub README)
-
-# 🏥 Sleep Analysis Pipeline
-
-![Python](https://img.shields.io/badge/Python-3.7%2B-blue)
-![MNE](https://img.shields.io/badge/MNE-Python-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
-
-**Automated Polysomnography (PSG) Data Analysis System**
-
-A comprehensive pipeline for processing sleep study data from EDF files, extracting key sleep metrics, and generating database-ready SQL queries.
-
-## ✨ Features
-
-- 🎯 **Automatic EDF File Processing** - Read and parse polysomnography data
-- 🔍 **Artifact Detection** - Smart identification of signal artifacts
-- 📊 **Sleep Stage Analysis** - Comprehensive sleep architecture scoring
-- ❤️ **ECG Analysis** - Heart rate variability and arrhythmia detection
-- 🌬️ **Respiratory Analysis** - Breathing patterns and event detection  
-- 💓 **SpO2 Monitoring** - Oxygen saturation statistics
-- 🗄️ **SQL Export** - Automated database updates
-- ⚡ **Parallel Processing** - Fast multi-file analysis
-
-## 🚀 Quick Start
-
-### Installation
-
-```bash
-pip install mne numpy scipy
-```
-
-### Basic Usage
-
-```python
-from edf34 import SQLGenerator
-
-# Process all EDF files in a folder
-generator = SQLGenerator()
-generator.generate_sql_files('edf_files/', 'sql_output/')
-```
-
-### Individual Component Usage
-
-#### Analyze Sleep Stages
-```python
-from edf34 import SleepAnalyzer
-
-analyzer = SleepAnalyzer()
-analyzer.load_edf('sleep_study.edf')
-stages = analyzer.calculate_stages()
-print(f"Sleep Efficiency: {stages['sleep_efficiency']}%")
-```
-
-#### ECG Analysis
-```python
-from edf34 import SignalAnalyzer
-
-analyzer = SignalAnalyzer()
-ecg_results = analyzer.analyze_ecg(raw_data)
-print(f"Average HR: {ecg_results['avg_heart_rate']} bpm")
-```
-
-## 📈 Output Metrics
-
-### Sleep Architecture
-- Total Sleep Time & Efficiency
-- N1, N2, N3, REM percentages
-- Sleep Latency & WASO
-- REM Cycles & Density
-
-### Respiratory Analysis
-- Apnea-Hypopnea Index (AHI)
-- Obstructive/Central/Mixed events
-- Oxygen Desaturation Index (ODI)
-- Snoring Analysis
-
-### Cardiac Metrics
-- Heart Rate & Variability
-- Tachycardia/Bradycardia events
-- Comprehensive HRV analysis
-
-### Quality Scores
-- Overall Sleep Quality (0-100)
-- REM Sleep Quality
-- Fragmentation Indices
-
-## 🗃️ Database Integration
-
-The system generates optimized SQL queries for MariaDB/MySQL:
-
-```sql
-UPDATE sleep_statistics SET 
-    total_sleep_time = 429,
-    sleep_efficiency = 85.39,
-    ahi = 13.83,
-    overall_sleep_quality = 56
-WHERE edf_uuid = '1b16b146-91d4-49be-a313-98fea1907037';
-```
-
-## 🛠️ Configuration
-
-Easy customization through config dictionary:
-
-```python
-CONFIG = {
-    'ecg': {'hr_min': 40, 'hr_max': 150},
-    'respiration': {'min_rate': 8, 'max_rate': 25},
-    'spo2': {'threshold_90': 90, 'threshold_85': 85}
-}
-```
-
-## 📁 Project Structure
-
-```
-edf34.py              # Main analysis pipeline
-PSG.sql               # Database schema
-sleep_stats_*.sql     # Generated SQL files
-```
-
-## 🎯 Use Cases
-
-- **Sleep Clinics** - Automated PSG report generation
-- **Research** - Bulk analysis of sleep studies
-- **Telemedicine** - Remote sleep monitoring
-- **Clinical Trials** - Standardized sleep metrics
-
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to submit pull requests or open issues for bugs and feature requests.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-For questions and support:
-- Open an issue on GitHub
-- Check the documentation
-- Review the example SQL outputs
-
----
-
-**Transform your sleep study analysis with automated, reliable, and comprehensive processing!** 🎉
