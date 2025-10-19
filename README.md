@@ -3,6 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.7%2B-blue)
 ![MNE](https://img.shields.io/badge/MNE-Python-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
+![GitHub](https://img.shields.io/badge/Platform-GitHub-lightgrey)
 
 **Automated Polysomnography (PSG) Data Analysis System**
 
