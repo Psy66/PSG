@@ -146,10 +146,8 @@ class SignalAnalyzer:
 			ecg_clean = ecg_signal - np.median(ecg_signal)
 
 			if len(ecg_clean) > 100:
-				# Явное использование scipy.signal
-				import scipy.signal as scipy_signal
-				b, a = scipy_signal.butter(3, [5 / (sfreq / 2), 35 / (sfreq / 2)], btype='band')
-				ecg_filtered = scipy_signal.filtfilt(b, a, ecg_clean)
+				b, a = signal.butter(3, [5 / (sfreq / 2), 35 / (sfreq / 2)], btype='band')
+				ecg_filtered = signal.filtfilt(b, a, ecg_clean)
 			else:
 				ecg_filtered = ecg_clean
 
@@ -158,10 +156,10 @@ class SignalAnalyzer:
 			if window_size % 2 == 0:
 				window_size += 1
 
-			ecg_smoothed = scipy_signal.medfilt(ecg_squared, kernel_size=window_size)
+			ecg_smoothed = signal.medfilt(ecg_squared, kernel_size=window_size)
 
 			threshold = np.percentile(ecg_smoothed, 85)
-			peaks, _ = scipy_signal.find_peaks(ecg_smoothed, height=threshold, distance=int(0.3 * sfreq))
+			peaks, _ = signal.find_peaks(ecg_smoothed, height=threshold, distance=int(0.3 * sfreq))
 
 			return peaks
 		except Exception as e:
@@ -206,10 +204,14 @@ class SignalAnalyzer:
 								total_duration = raw.times[-1]
 								valid_ratio = total_valid / len(raw.times)
 
-								stats['time_below_spo2_90'] = int(
-									(below_90 / total_valid) * (total_duration / 60) * valid_ratio)
-								stats['time_below_spo2_85'] = int(
-									(below_85 / total_valid) * (total_duration / 60) * valid_ratio)
+								if total_valid > 0:
+									stats['time_below_spo2_90'] = int(
+										(below_90 / total_valid) * (total_duration / 60) * valid_ratio)
+									stats['time_below_spo2_85'] = int(
+										(below_85 / total_valid) * (total_duration / 60) * valid_ratio)
+								else:
+									stats['time_below_spo2_90'] = 0
+									stats['time_below_spo2_85'] = 0
 
 		except Exception as e:
 			print(f"SpO2 analysis error: {e}")
@@ -307,10 +309,8 @@ class SignalAnalyzer:
 
 			if low_freq >= 1.0 or high_freq >= 1.0:
 				return normalized
-
-			import scipy.signal as scipy_signal
-			b, a = scipy_signal.butter(3, [low_freq, high_freq], btype='band')
-			filtered = scipy_signal.filtfilt(b, a, normalized)
+			b, a = signal.butter(3, [low_freq, high_freq], btype='band')
+			filtered = signal.filtfilt(b, a, normalized)
 
 			return filtered
 
@@ -379,11 +379,55 @@ class SleepAnalyzer:
 
 	def load_edf(self, path):
 		try:
-			self.raw = mne.io.read_raw_edf(path, preload=True, verbose=False)
+			self.raw = mne.io.read_raw_edf(
+				path,
+				preload=True,
+				verbose=False,
+				infer_types=True,
+				stim_channel=None
+			)
+
+			if hasattr(self.raw, 'annotations') and self.raw.annotations:
+				self._fix_annotations_out_of_bounds()
+
 			return self.raw
+
 		except Exception as e:
 			print(f"Load error {path}: {e}")
 			return None
+
+	def _fix_annotations_out_of_bounds(self):
+		if not hasattr(self.raw, 'annotations') or not self.raw.annotations:
+			return
+
+		data_duration = self.raw.times[-1]
+		new_onset = []
+		new_duration = []
+		new_description = []
+
+		for onset, duration, desc in zip(self.raw.annotations.onset,
+		                                 self.raw.annotations.duration,
+		                                 self.raw.annotations.description):
+			if onset >= data_duration:
+				continue
+
+			if onset + duration > data_duration:
+				duration = data_duration - onset
+
+			new_onset.append(onset)
+			new_duration.append(duration)
+			new_description.append(desc)
+
+		if new_onset:
+			self.raw.set_annotations(
+				mne.Annotations(
+					onset=new_onset,
+					duration=new_duration,
+					description=new_description
+				)
+			)
+		else:
+			self.raw.set_annotations(mne.Annotations([], [], []))
 
 	def extract_uuid(self, path):
 		try:
@@ -598,7 +642,27 @@ class SleepAnalyzer:
 		if not self.raw or not hasattr(self.raw, 'annotations'):
 			return 0
 
-		annotations = self.raw.annotations
+		sequence = self.extract_stage_sequence()
+		if not sequence:
+			return 0
+
+		cycles = 0
+		in_rem_sequence = False
+
+		for i in range(len(sequence)):
+			if sequence[i] == 'R' and not in_rem_sequence:
+				in_rem_sequence = True
+			elif in_rem_sequence and sequence[i] in ['N1', 'N2', 'N3', 'W']:
+				cycles += 1
+				in_rem_sequence = False
+
+		return cycles
+
+	def extract_stage_sequence(self):
+		"""Извлекает последовательность стадий сна"""
+		if not self.raw or not hasattr(self.raw, 'annotations'):
+			return []
+
 		mapping = {
 			'Sleep stage W(eventUnknown)': 'W',
 			'Sleep stage 1(eventUnknown)': 'N1',
@@ -608,33 +672,12 @@ class SleepAnalyzer:
 		}
 
 		sequence = []
-		for desc, duration in zip(annotations.description, annotations.duration):
+		for desc, duration in zip(self.raw.annotations.description, self.raw.annotations.duration):
 			desc_str = str(desc)
 			if desc_str in mapping and abs(duration - 30) < 1:
 				sequence.append(mapping[desc_str])
 
-		if not sequence:
-			return 0
-
-		cycles = 0
-		in_rem = False
-		rem_started = False
-
-		for i in range(1, len(sequence) - 1):
-			current, prev, next_ = sequence[i], sequence[i - 1], sequence[i + 1]
-
-			if current == 'R' and prev in ['N1', 'N2', 'N3'] and not rem_started:
-				rem_started = True
-				in_rem = True
-			elif current == 'R' and next_ in ['N1', 'N2', 'N3'] and in_rem:
-				cycles += 1
-				in_rem = False
-				rem_started = False
-			elif current == 'W' and in_rem:
-				in_rem = False
-				rem_started = False
-
-		return cycles
+		return sequence
 
 	def calculate_sleep_quality(self):
 		if not self.raw or not self.stages:

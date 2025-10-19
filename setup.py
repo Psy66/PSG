@@ -5,13 +5,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="sleep-analysis-pipeline",
-    version="1.0.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    version="1.4.0",
+    author="Tim Liner",
+    author_email="psy66@ya.ru",
     description="Automated Polysomnography Data Analysis System",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/sleep-analysis-pipeline",
+    url="https://github.com/yourusername/PSG",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
