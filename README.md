@@ -289,24 +289,6 @@ Refer to `PSG.sql` for complete database schema including:
 - `sleep_statistics` - Comprehensive sleep metrics
 - Additional tables for raw data and event logging
 
-## ⚙️ Configuration
-
-### Default Configuration
-The system includes sensible defaults for clinical sleep analysis:
-
-```python
-CONFIG = {
-    'ecg': {'rr_min': 0.3, 'rr_max': 2.0, 'hr_min': 40, 'hr_max': 150},
-    'respiration': {'min_rate': 8, 'max_rate': 25, 'filter_low': 0.1, 'filter_high': 1.0},
-    'spo2': {'min_valid': 75, 'max_valid': 100, 'threshold_90': 90, 'threshold_85': 85},
-    'sleep_quality': {
-        'efficiency_weights': {85: 25, 70: 20, 50: 10},
-        'n3_threshold': 15, 'rem_threshold': 20,
-        'ahi_weights': {5: 30, 15: 20, 30: 10},
-        'arousal_weights': {10: 15, 20: 10}
-    }
-}
-```
 
 ## 📚 Technical Documentation
 
@@ -366,17 +348,6 @@ See [DISCLAIMER.md](DISCLAIMER.md) for complete medical disclaimer.
 **Tim Liner**  
 - GitHub: [@Psy66](https://github.com/Psy66)  
 - Project Repository: [sleep-analysis-pipeline](https://github.com/Psy66/PSG)
-
-## 🆘 Support
-
-For technical support and questions:
-- Open an issue on GitHub
-- Review the technical documentation
-- Check the example outputs and configuration
-
----
-
-**Transform your sleep research with enterprise-grade automated analysis pipeline.** 🎉
 
 ---
 
