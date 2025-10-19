@@ -5,6 +5,7 @@ from collections import Counter
 import json
 import mne
 import numpy as np
+import glob
 from scipy import signal
 
 # Конфигурация анализа
@@ -17,7 +18,7 @@ ANALYSIS_CONFIG = {
 		'rr_min': 0.3,  # минимальный RR интервал (сек)
 		'rr_max': 2.0,  # максимальный RR интервал (сек)
 		'hr_min': 40,  # минимальная ЧСС (уд/мин)
-		'hr_max': 180,  # максимальная ЧСС (уд/мин)
+		'hr_max': 150,  # максимальная ЧСС (уд/мин)
 	},
 
 	# Настройки дыхательного анализа
@@ -254,10 +255,27 @@ class SleepAnalyzer:
 		if total_sleep_time == 0:
 			return {}
 
-		ahi = (respiratory_events.get('apneas', 0) + respiratory_events.get('hypopneas', 0)) / (total_sleep_time / 60)
-		odi = respiratory_events.get('desaturations', 0) / (total_sleep_time / 60)
-		snoring_index = respiratory_events.get('snoring', 0) / (total_sleep_time / 60)
+		# Расчет индексов
+		sleep_hours = total_sleep_time / 60
 
+		# Общий AHI (все апноэ + все гипопноэ)
+		ahi = (respiratory_events.get('apneas', 0) + respiratory_events.get('hypopneas', 0)) / sleep_hours
+
+		# AHI по типам
+		ahi_obstructive = (respiratory_events.get('obstructive_apneas', 0) +
+		                   respiratory_events.get('obstructive_hypopneas', 0)) / sleep_hours
+		ahi_central = (respiratory_events.get('central_apneas', 0) +
+		               respiratory_events.get('central_hypopneas', 0)) / sleep_hours
+		ahi_mixed = (respiratory_events.get('mixed_apneas', 0) +
+		             respiratory_events.get('mixed_hypopneas', 0)) / sleep_hours
+
+		# Индекс десатураций
+		odi = respiratory_events.get('desaturations', 0) / sleep_hours
+
+		# Индекс храпа
+		snoring_index = respiratory_events.get('snoring', 0) / sleep_hours
+
+		# Оценка тяжести
 		ahi_severity = ("норма" if ahi < 5 else
 		                "легкая" if ahi < 15 else
 		                "средняя" if ahi < 30 else "тяжелая")
@@ -265,12 +283,22 @@ class SleepAnalyzer:
 		return {
 			'ahi': ahi,
 			'ahi_severity': ahi_severity,
+			'ahi_obstructive': ahi_obstructive,
+			'ahi_central': ahi_central,
+			'ahi_mixed': ahi_mixed,
 			'odi': odi,
 			'snoring_index': snoring_index,
 			'total_apneas': respiratory_events.get('apneas', 0),
+			'total_obstructive_apneas': respiratory_events.get('obstructive_apneas', 0),
+			'total_central_apneas': respiratory_events.get('central_apneas', 0),
+			'total_mixed_apneas': respiratory_events.get('mixed_apneas', 0),
 			'total_hypopneas': respiratory_events.get('hypopneas', 0),
+			'total_obstructive_hypopneas': respiratory_events.get('obstructive_hypopneas', 0),
+			'total_central_hypopneas': respiratory_events.get('central_hypopneas', 0),
+			'total_mixed_hypopneas': respiratory_events.get('mixed_hypopneas', 0),
 			'total_desaturations': respiratory_events.get('desaturations', 0),
-			'total_snores': respiratory_events.get('snoring', 0)
+			'total_snores': respiratory_events.get('snoring', 0),
+			'cheyne_stokes_episodes': respiratory_events.get('cheyne_stokes', 0)
 		}
 
 	def calculate_respiratory_events(self):
@@ -279,22 +307,44 @@ class SleepAnalyzer:
 
 		respiratory_events = {
 			'apneas': 0,
+			'obstructive_apneas': 0,
+			'central_apneas': 0,
+			'mixed_apneas': 0,
 			'hypopneas': 0,
+			'obstructive_hypopneas': 0,
+			'central_hypopneas': 0,
+			'mixed_hypopneas': 0,
 			'desaturations': 0,
-			'snoring': 0
+			'snoring': 0,
+			'cheyne_stokes': 0
 		}
 
 		event_mapping = {
-			'Обструктивное апноэ(pointPolySomnographyObstructiveApnea)': 'apneas',
-			'Обструктивное гипопноэ(pointPolySomnographyHypopnea)': 'hypopneas',
+			'Обструктивное апноэ(pointPolySomnographyObstructiveApnea)': 'obstructive_apneas',
+			'Центральное апноэ(pointPolySomnographyCentralApnea)': 'central_apneas',
+			'Смешанное апноэ(pointPolySomnographyMixedApnea)': 'mixed_apneas',
+			'Обструктивное гипопноэ(pointPolySomnographyHypopnea)': 'obstructive_hypopneas',
+			'Центральное гипопноэ(pointPolySomnographyCentralHypopnea)': 'central_hypopneas',
+			'Смешанное гипопноэ(pointPolySomnographyMixedHypopnea)': 'mixed_hypopneas',
 			'Десатурация(pointPolySomnographyDesaturation)': 'desaturations',
-			'Храп(pointPolySomnographySnore)': 'snoring'
+			'Храп(pointPolySomnographySnore)': 'snoring',
+			'Дыхание Чейна-Стокса(pointPolySomnographyCheyneStokesRespiration)': 'cheyne_stokes'
 		}
 
 		for desc in annotations.description:
 			desc_str = str(desc)
 			if desc_str in event_mapping:
 				respiratory_events[event_mapping[desc_str]] += 1
+
+		# Общее количество апноэ (все типы)
+		respiratory_events['apneas'] = (respiratory_events['obstructive_apneas'] +
+		                                respiratory_events['central_apneas'] +
+		                                respiratory_events['mixed_apneas'])
+
+		# Общее количество гипопноэ (все типы)
+		respiratory_events['hypopneas'] = (respiratory_events['obstructive_hypopneas'] +
+		                                   respiratory_events['central_hypopneas'] +
+		                                   respiratory_events['mixed_hypopneas'])
 
 		return respiratory_events
 
@@ -936,6 +986,28 @@ class SleepAnalyzer:
 		for desc, count in sorted(annotation_counts.items(), key=lambda x: x[1], reverse=True):
 			print(f"  {count:>5} × {desc}")
 
+	def _get_processed_uuids(self, output_folder):
+		"""Получает список UUID из уже созданных SQL файлов"""
+		import glob
+
+		processed_uuids = set()
+
+		# Ищем все SQL файлы в выходной папке
+		sql_files = glob.glob(os.path.join(output_folder, "sleep_stats_*.sql"))
+
+		for sql_file in sql_files:
+			try:
+				# Извлекаем UUID из имени файла
+				filename = os.path.basename(sql_file)
+				uuid_match = re.search(r'sleep_stats_([a-fA-F0-9-]+)\.sql', filename)
+				if uuid_match:
+					uuid = uuid_match.group(1)
+					processed_uuids.add(uuid)
+			except Exception as e:
+				print(f"⚠️ Ошибка при чтении UUID из файла {filename}: {e}")
+
+		return processed_uuids
+
 	def generate_sql_insert_statements(self, edf_path, patient_info):
 		"""Генерация SQL UPDATE запросов в правильном формате"""
 		if not self.raw:
@@ -994,19 +1066,24 @@ class SleepAnalyzer:
 			'rem_density': round(rem_quality.get('rem_density', 0), 2) if rem_quality.get('rem_density') else None,
 			'rem_quality_score': rem_quality.get('rem_quality_score'),
 
-			# Дыхательные нарушения (события)
+			# "Дыхательные нарушения (события)"
 			'total_apneas': respiratory_events.get('apneas', 0),
-			'obstructive_apneas': respiratory_events.get('apneas', 0),
-			'central_apneas': 0,  # Требует дополнительного анализа
-			'mixed_apneas': 0,  # Требует дополнительного анализа
+			'obstructive_apneas': respiratory_events.get('obstructive_apneas', 0),
+			'central_apneas': respiratory_events.get('central_apneas', 0),
+			'mixed_apneas': respiratory_events.get('mixed_apneas', 0),
 			'total_hypopneas': respiratory_events.get('hypopneas', 0),
+			'obstructive_hypopneas': respiratory_events.get('obstructive_hypopneas', 0),
+			'central_hypopneas': respiratory_events.get('central_hypopneas', 0),
+			'mixed_hypopneas': respiratory_events.get('mixed_hypopneas', 0),
 			'total_desaturations': respiratory_events.get('desaturations', 0),
 			'total_snores': respiratory_events.get('snoring', 0),
+			'cheyne_stokes_episodes': respiratory_events.get('cheyne_stokes', 0),
 
-			# Дыхательные индексы
+			# "Дыхательные индексы"
 			'ahi': round(sleep_indices.get('ahi', 0), 2),
-			'ahi_obstructive': round(sleep_indices.get('ahi', 0), 2),
-			'ahi_central': 0,  # Требует дополнительного анализа
+			'ahi_obstructive': round(sleep_indices.get('ahi_obstructive', 0), 2),
+			'ahi_central': round(sleep_indices.get('ahi_central', 0), 2),
+			'ahi_mixed': round(sleep_indices.get('ahi_mixed', 0), 2),
 			'odi': round(sleep_indices.get('odi', 0), 2),
 			'snore_index': round(sleep_indices.get('snoring_index', 0), 2),
 
@@ -1113,6 +1190,9 @@ class SleepAnalyzer:
 		# Создание папки для выходных файлов
 		os.makedirs(output_folder, exist_ok=True)
 
+		# Получаем список уже обработанных UUID из существующих SQL файлов
+		processed_uuids = self._get_processed_uuids(output_folder)
+
 		# Поиск всех EDF файлов в папке
 		edf_files = glob.glob(os.path.join(folder_path, "*.edf"))
 
@@ -1121,9 +1201,11 @@ class SleepAnalyzer:
 			return []
 
 		print(f"📁 Найдено {len(edf_files)} EDF файлов для обработки")
+		print(f"📊 Уже обработано UUID: {len(processed_uuids)}")
 
 		processed_files = []
 		failed_files = []
+		skipped_files = []
 
 		for i, edf_path in enumerate(edf_files, 1):
 			print(f"\n{'=' * 60}")
@@ -1131,15 +1213,28 @@ class SleepAnalyzer:
 			print(f"{'=' * 60}")
 
 			try:
+				# Сначала извлекаем UUID из файла
+				patient_info = self.extract_patient_info_from_edf(edf_path)
+				uuid = patient_info.get('uuid')
+
+				if not uuid:
+					print(f"❌ Не удалось извлечь UUID из файла: {os.path.basename(edf_path)}")
+					failed_files.append(edf_path)
+					continue
+
+				# Проверяем, не обработан ли уже этот UUID
+				if uuid in processed_uuids:
+					print(f"⏭️  Пропуск (уже обработан): {os.path.basename(edf_path)}")
+					print(f"   UUID: {uuid}")
+					skipped_files.append(edf_path)
+					continue
+
 				# Загрузка файла
 				raw = self.load_edf_file(edf_path)
 				if not raw:
 					print(f"❌ Не удалось загрузить файл: {os.path.basename(edf_path)}")
 					failed_files.append(edf_path)
 					continue
-
-				# Извлечение информации о пациенте
-				patient_info = self.extract_patient_info_from_edf(edf_path)
 
 				# Генерация SQL
 				sql_filename = self.generate_sql_insert_statements(edf_path, patient_info)
@@ -1165,11 +1260,17 @@ class SleepAnalyzer:
 		print("📊 СВОДКА ОБРАБОТКИ")
 		print(f"{'=' * 60}")
 		print(f"✅ Успешно обработано: {len(processed_files)} файлов")
+		print(f"⏭️  Пропущено (уже обработаны): {len(skipped_files)} файлов")
 		print(f"❌ Не удалось обработать: {len(failed_files)} файлов")
 
 		if processed_files:
 			print(f"\n📁 SQL файлы сохранены в папке: {output_folder}")
 			for file in processed_files:
+				print(f"  • {os.path.basename(file)}")
+
+		if skipped_files:
+			print(f"\n⏭️  Пропущенные файлы (уже обработаны):")
+			for file in skipped_files:
 				print(f"  • {os.path.basename(file)}")
 
 		if failed_files:
@@ -1197,6 +1298,8 @@ def main():
 
 	if processed_files:
 		print(f"\n🎉 Пакетная обработка завершена! Создано {len(processed_files)} SQL файлов")
+	else:
+		print(f"\nℹ️  Все файлы уже обработаны или не найдены новых файлов для обработки")
 
 if __name__ == "__main__":
 	main()
