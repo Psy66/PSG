@@ -353,7 +353,7 @@ We welcome contributions from the research community. Please see [CONTRIBUTING.m
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## ⚠️ Medical Disclaimer
 
@@ -365,7 +365,7 @@ See [DISCLAIMER.md](DISCLAIMER.md) for complete medical disclaimer.
 
 **Tim Liner**  
 - GitHub: [@Psy66](https://github.com/Psy66)  
-- Project Repository: [sleep-analysis-pipeline](https://github.com/Psy66/sleep-analysis-pipeline)
+- Project Repository: [sleep-analysis-pipeline](https://github.com/Psy66/PSG)
 
 ## 🆘 Support
 
@@ -381,4 +381,3 @@ For technical support and questions:
 ---
 
 *Last updated: October 2025*
-```
