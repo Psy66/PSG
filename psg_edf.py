@@ -659,7 +659,6 @@ class SleepAnalyzer:
 		return cycles
 
 	def extract_stage_sequence(self):
-		"""Извлекает последовательность стадий сна"""
 		if not self.raw or not hasattr(self.raw, 'annotations'):
 			return []
 
@@ -947,7 +946,6 @@ class SQLGenerator:
 		print(f"Generated {len(valid_sql)} SQL files in {output_dir}")
 
 	def combine_sql_files(self, folder_path, output_file="combined_updates.sql"):
-		"""Объединяет все SQL файлы в один компактный файл"""
 		import glob
 
 		sql_files = glob.glob(os.path.join(folder_path, "*.sql"))
